@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YT Clip Downloader</title>
+<style>
+  :root {
+    --bg: #0f1117; --panel: #171a23; --panel2: #1e222e; --border: #2a2f3e;
+    --text: #e8eaf0; --muted: #8b91a5; --accent: #ff4d5e; --accent2: #ff6b7a;
+    --green: #34d399; --amber: #fbbf24; --red: #f87171; --blue: #60a5fa;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font: 15px/1.5 -apple-system, "Segoe UI", sans-serif; min-height: 100vh; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 32px 20px 80px; }
+  h1 { font-size: 26px; letter-spacing: -0.5px; margin-bottom: 4px; }
+  h1 .yt { color: var(--accent); }
+  .sub { color: var(--muted); margin-bottom: 28px; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 20px; margin-bottom: 20px; }
+  .card h2 { font-size: 15px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 14px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.8px; padding: 6px 8px; }
+  td { padding: 5px 4px; }
+  td.sn { color: var(--muted); font-size: 13px; text-align: center; font-variant-numeric: tabular-nums; width: 34px; }
+  input[type=text] { width: 100%; background: var(--panel2); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 9px 12px; font-size: 14px; outline: none; transition: border-color .15s; }
+  input[type=text]:focus { border-color: var(--accent); }
+  input.bad { border-color: var(--red); }
+  input:disabled { opacity: .5; }
+  .del { background: none; border: none; color: var(--muted); font-size: 17px; cursor: pointer; padding: 4px 8px; border-radius: 6px; }
+  .del:hover { color: var(--accent); background: var(--panel2); }
+  .row-actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; align-items: center; }
+  .total { margin-left: auto; font-size: 13.5px; color: var(--muted); background: var(--panel2); border: 1px solid var(--border); padding: 8px 14px; border-radius: 9px; }
+  .total b { color: var(--green); font-size: 15px; font-variant-numeric: tabular-nums; }
+  .setting { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--muted); }
+  select { background: var(--panel2); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 8px 10px; font-size: 14px; outline: none; cursor: pointer; }
+  select:focus { border-color: var(--accent); }
+  button.btn { border: none; border-radius: 9px; padding: 10px 16px; font-size: 14px; font-weight: 600; cursor: pointer; transition: transform .1s, opacity .15s; }
+  button.btn:active { transform: scale(.97); }
+  .btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; font-size: 15px; padding: 12px 26px; }
+  .btn-ghost { background: var(--panel2); color: var(--text); border: 1px solid var(--border); }
+  .btn-green { background: rgba(52,211,153,.15); color: var(--green); border: 1px solid rgba(52,211,153,.3); }
+  .btn-red { background: rgba(248,113,113,.12); color: var(--red); border: 1px solid rgba(248,113,113,.3); }
+  .btn-amber { background: rgba(251,191,36,.12); color: var(--amber); border: 1px solid rgba(251,191,36,.3); }
+  .btn-sm { padding: 6px 12px; font-size: 12.5px; border-radius: 7px; }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  textarea { width: 100%; background: var(--panel2); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 10px 12px; font: 13px/1.6 ui-monospace, Menlo, monospace; min-height: 90px; resize: vertical; outline: none; }
+  textarea:focus { border-color: var(--accent); }
+  .hint { color: var(--muted); font-size: 12.5px; margin-top: 8px; }
+  .hint code { background: var(--panel2); padding: 1px 6px; border-radius: 5px; font-size: 12px; }
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+  .folder-chip { display: flex; align-items: center; gap: 8px; background: var(--panel2); border: 1px solid var(--border); border-radius: 9px; padding: 8px 14px; font-size: 14px; }
+  .folder-chip b { color: var(--blue); }
+  .job { display: flex; align-items: flex-start; gap: 12px; padding: 12px 4px; border-bottom: 1px solid var(--border); }
+  .job:last-child { border-bottom: none; }
+  .job-num { min-width: 40px; text-align: center; font-weight: 700; font-size: 15px; color: var(--blue); background: rgba(96,165,250,.1); border-radius: 8px; padding: 6px 0; font-variant-numeric: tabular-nums; }
+  .job-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+  .job-edit { display: flex; gap: 6px; }
+  .job-edit .ju { flex: 1; }
+  .job-edit .jt { width: 130px; }
+  .job-edit input { padding: 6px 10px; font-size: 13px; }
+  .job-meta { font-size: 12px; color: var(--muted); }
+  .bar { height: 6px; background: var(--panel2); border-radius: 4px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 4px; transition: width .4s; }
+  .badge { font-size: 11.5px; font-weight: 700; padding: 4px 10px; border-radius: 20px; white-space: nowrap; margin-top: 4px; }
+  .b-queued { background: #2a2f3e; color: var(--muted); }
+  .b-running { background: rgba(251,191,36,.12); color: var(--amber); }
+  .b-done { background: rgba(52,211,153,.12); color: var(--green); }
+  .b-error { background: rgba(248,113,113,.12); color: var(--red); }
+  .b-stopped { background: rgba(96,165,250,.12); color: var(--blue); }
+  a.dl { color: var(--green); font-weight: 600; text-decoration: none; font-size: 13px; white-space: nowrap; margin-top: 7px; }
+  a.dl:hover { text-decoration: underline; }
+  .err { color: var(--red); font-size: 12.5px; word-break: break-word; background: rgba(248,113,113,.07); border: 1px solid rgba(248,113,113,.15); border-radius: 7px; padding: 6px 10px; }
+  .empty { color: var(--muted); text-align: center; padding: 24px 0; font-size: 14px; }
+  .spin { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--amber); border-top-color: transparent; border-radius: 50%; animation: sp .7s linear infinite; vertical-align: -2px; margin-right: 5px; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+  .job-side { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1><span class="yt">▶</span> YT Clip Downloader</h1>
+  <p class="sub">Link + timestamp daalo, sirf wohi clip Full HD (1080p) mein download hogi. Files numbered folder mein 1.mp4, 2.mp4... naam se save hoti hain.</p>
+
+  <div class="card">
+    <h2>Clips</h2>
+    <table id="tbl">
+      <thead><tr><th style="width:34px">#</th><th style="width:55%">YouTube Link</th><th>Timestamp (start-end)</th><th style="width:36px"></th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div class="row-actions">
+      <button class="btn btn-ghost" onclick="addRow()">+ Add Row</button>
+      <button class="btn btn-primary" id="go" onclick="submitJobs()">⬇ Download Clips</button>
+      <span class="setting">Parallel: <select id="conc"></select></span>
+      <span class="setting" title="Bot-check error aaye to browser cookies use hote hain (sirf aapki machine par)">Cookies: <select id="cookies">
+        <option value="none">Auto</option>
+        <option value="chrome">Chrome</option>
+        <option value="safari">Safari</option>
+        <option value="brave">Brave</option>
+        <option value="edge">Edge</option>
+        <option value="firefox">Firefox</option>
+      </select></span>
+      <span class="total" id="total">Total: <b>0:00</b></span>
+    </div>
+    <p class="hint">Timestamp examples: <code>1:20-2:45</code> · <code>0:05-0:30</code> · <code>1:20</code> (start se end tak) · khali chhodo = full video</p>
+  </div>
+
+  <div class="card">
+    <h2>Bulk Paste</h2>
+    <textarea id="bulk" placeholder="Ek line mein ek entry — link ke baad timestamp (SN column ho to bhi chalega):&#10;1	https://youtu.be/xxxx	0:06–0:08&#10;2	https://youtu.be/yyyy	2:38–2:40"></textarea>
+    <div class="row-actions">
+      <button class="btn btn-ghost" onclick="parseBulk()">Table mein daalo</button>
+      <span class="total" id="bulkTotal" style="display:none">Total: <b>0:00</b></span>
+    </div>
+    <p class="hint">Excel/Sheets se seedha copy-paste karo — SN, header line, en-dash sab auto-handle hota hai.</p>
+  </div>
+
+  <div class="card">
+    <h2>Downloads</h2>
+    <div class="toolbar">
+      <span class="folder-chip">📁 <b id="folderName">Folder 1</b></span>
+      <button class="btn btn-ghost btn-sm" onclick="newFolder()" title="Naya folder — numbering 1 se restart">+ New Folder</button>
+      <button class="btn btn-ghost btn-sm" onclick="post('/api/folder/open')">Open in Finder</button>
+      <span style="flex:1"></span>
+      <button class="btn btn-sm" id="stopStart" onclick="toggleStop()">⏸ Stop All</button>
+      <button class="btn btn-amber btn-sm" id="retryFailed" onclick="post('/api/retry-failed')">↻ Retry All Failed</button>
+      <button class="btn btn-ghost btn-sm" onclick="post('/api/clear')">Clear Finished</button>
+      <button class="btn btn-red btn-sm" onclick="clearAll()">✕ Clear Queue All</button>
+    </div>
+    <div id="jobs"><div class="empty">Abhi koi download nahi — upar links daal ke shuru karo</div></div>
+  </div>
+</div>
+
+<script>
+const rows = document.getElementById('rows');
+
+function toSec(ts) {
+  ts = String(ts).trim();
+  if (!ts) return null;
+  const parts = ts.split(':').map(Number);
+  if (parts.some(isNaN)) return null;
+  return parts.reduce((a, p) => a * 60 + p, 0);
+}
+
+function rangeDur(raw) {
+  raw = String(raw || '').trim();
+  if (!raw) return 'full';
+  const m = raw.split(/\s*(?:-|–|—|to)\s*/i);
+  const start = toSec(m[0]);
+  if (start === null) return null;
+  if (m.length < 2 || !m[1]) return 'open';
+  const end = toSec(m[1]);
+  if (end === null || end <= start) return null;
+  return end - start;
+}
+
+function fmtDur(s) {
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = Math.floor(s % 60);
+  return (h ? h + ':' + String(m).padStart(2, '0') : String(m)) + ':' + String(sec).padStart(2, '0');
+}
+
+function calcTotal(pairs) {
+  let sum = 0, clips = 0, open = 0, full = 0;
+  for (const [url, range] of pairs) {
+    if (!url) continue;
+    const d = rangeDur(range);
+    if (typeof d === 'number') { sum += d; clips++; }
+    else if (d === 'open') open++;
+    else if (d === 'full') full++;
+  }
+  return { sum, clips, open, full };
+}
+
+function totalHTML(t) {
+  let extra = [];
+  if (t.open) extra.push(t.open + ' till-end');
+  if (t.full) extra.push(t.full + ' full');
+  return `${t.clips} clip${t.clips === 1 ? '' : 's'} · Total: <b>${fmtDur(t.sum)}</b>` +
+    (extra.length ? ` <span style="opacity:.7">(+ ${extra.join(', ')})</span>` : '');
+}
+
+function renumber() {
+  [...rows.querySelectorAll('tr')].forEach((tr, i) => tr.querySelector('.sn').textContent = i + 1);
+}
+
+function updateTotal() {
+  const pairs = [...rows.querySelectorAll('tr')].map(tr =>
+    [tr.querySelector('.u').value.trim(), tr.querySelector('.t').value.trim()]);
+  document.getElementById('total').innerHTML = totalHTML(calcTotal(pairs));
+}
+
+function addRow(url = '', ts = '') {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td class="sn"></td>
+    <td><input type="text" class="u" placeholder="https://youtube.com/watch?v=..."></td>
+    <td><input type="text" class="t" placeholder="1:20-2:45"></td>
+    <td><button class="del" title="Remove">✕</button></td>`;
+  tr.querySelector('.u').value = url;
+  tr.querySelector('.t').value = ts;
+  tr.querySelector('.del').onclick = () => { tr.remove(); if (!rows.children.length) addRow(); renumber(); updateTotal(); };
+  rows.appendChild(tr);
+  renumber();
+}
+addRow(); addRow(); addRow();
+rows.addEventListener('input', updateTotal);
+document.getElementById('bulk').addEventListener('input', updateBulkTotal);
+updateTotal();
+
+function parseLines(text) {
+  const out = [];
+  for (const line of text.split('\n').map(l => l.trim()).filter(Boolean)) {
+    const m = line.match(/(https?:\/\/\S+)[\s,;]*(.*)/);
+    if (m) out.push([m[1].replace(/[,;]+$/, ''), m[2].trim().replace(/\s+/g, '')]);
+  }
+  return out;
+}
+
+function updateBulkTotal() {
+  const box = document.getElementById('bulkTotal');
+  const pairs = parseLines(document.getElementById('bulk').value);
+  if (!pairs.length) { box.style.display = 'none'; return; }
+  box.style.display = '';
+  box.innerHTML = totalHTML(calcTotal(pairs));
+}
+
+function parseBulk() {
+  const parsed = parseLines(document.getElementById('bulk').value);
+  if (!parsed.length) return;
+  for (const [u, t] of parsed) {
+    const empty = [...rows.querySelectorAll('tr')].find(tr => !tr.querySelector('.u').value.trim());
+    if (empty) { empty.querySelector('.u').value = u; empty.querySelector('.t').value = t; }
+    else addRow(u, t);
+  }
+  document.getElementById('bulk').value = '';
+  updateBulkTotal();
+  updateTotal();
+}
+
+async function post(url, body) {
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  poll();
+  return r.json().catch(() => ({}));
+}
+
+async function submitJobs() {
+  const items = [];
+  for (const tr of rows.querySelectorAll('tr')) {
+    const url = tr.querySelector('.u').value.trim();
+    const range = tr.querySelector('.t').value.trim();
+    if (url) items.push({ url, range, tr });
+  }
+  if (!items.length) return;
+  const btn = document.getElementById('go');
+  btn.disabled = true;
+  try {
+    const data = await post('/api/jobs', { items: items.map(({ url, range }) => ({ url, range })) });
+    for (const it of items) {
+      const rej = (data.rejected || []).find(x => x.url === it.url);
+      if (rej) it.tr.querySelector(rej.reason.includes('timestamp') ? '.t' : '.u').classList.add('bad');
+      else it.tr.remove();
+    }
+    if (!rows.children.length) { addRow(); addRow(); addRow(); }
+    renumber();
+    updateTotal();
+  } finally { btn.disabled = false; }
+}
+
+async function newFolder() {
+  await post('/api/folder/new');
+}
+
+async function clearAll() {
+  if (!confirm('Poora queue clear karna hai? (Files delete nahi hongi)')) return;
+  await post('/api/clear-all');
+}
+
+let lastPaused = false;
+async function toggleStop() {
+  await post(lastPaused ? '/api/start' : '/api/stop');
+}
+
+// ---- keyed job rendering (inputs preserved across polls) ----
+const jobEls = new Map();
+
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function makeJobEl(j) {
+  const el = document.createElement('div');
+  el.className = 'job';
+  el.innerHTML = `
+    <div class="job-num"></div>
+    <div class="job-info">
+      <div class="job-edit">
+        <input type="text" class="ju" title="Link edit karke Retry dabao">
+        <input type="text" class="jt" title="Timestamp">
+      </div>
+      <div class="job-meta"></div>
+      <div class="bar" style="display:none"><i></i></div>
+      <div class="err" style="display:none"></div>
+    </div>
+    <div class="job-side">
+      <span class="badge"></span>
+      <button class="btn btn-amber btn-sm jretry" style="display:none">↻ Retry</button>
+      <a class="dl" style="display:none" download>⬇ Save</a>
+    </div>`;
+  el.querySelector('.ju').value = j.url;
+  el.querySelector('.jt').value = j.rawRange || '';
+  el.querySelector('.jretry').onclick = () => {
+    post(`/api/jobs/${j.id}/retry`, {
+      url: el.querySelector('.ju').value.trim(),
+      range: el.querySelector('.jt').value.trim(),
+    });
+  };
+  return el;
+}
+
+function updateJobEl(el, j) {
+  el.querySelector('.job-num').textContent = '#' + j.num;
+  const editable = j.status === 'error' || j.status === 'stopped' || j.status === 'done';
+  const ju = el.querySelector('.ju'), jt = el.querySelector('.jt');
+  ju.disabled = jt.disabled = !editable;
+  // user ke edits preserve karo — sirf tab overwrite jab input focus mein nahi hai aur value stale ho
+  if (document.activeElement !== ju && !editable) ju.value = j.url;
+  if (document.activeElement !== jt && !editable) jt.value = j.rawRange || '';
+
+  const meta = [];
+  meta.push(j.range || '');
+  if (j.folder && j.file) meta.push(`${j.folder}/${j.file}`);
+  if (j.size) meta.push((j.size / 1048576).toFixed(1) + ' MB');
+  if (j.status === 'running' && j.attempt > 1) meta.push(`attempt ${j.attempt}/3`);
+  el.querySelector('.job-meta').textContent = meta.filter(Boolean).join(' · ');
+
+  const badge = el.querySelector('.badge');
+  const phaseLabels = { processing: 'Processing', 'full-download': 'Full DL (shared)', cutting: 'Cutting ✂', 'retrying with Chrome cookies': 'Cookies retry' };
+  const labels = {
+    queued: 'Queued',
+    running: j.phase && j.phase.startsWith('retrying') ? 'Retrying' : (phaseLabels[j.phase] || 'Downloading'),
+    done: 'Done ✓', error: 'Failed', stopped: 'Stopped',
+  };
+  badge.className = 'badge b-' + j.status;
+  badge.innerHTML = (j.status === 'running' ? '<span class="spin"></span>' : '') +
+    labels[j.status] + (j.status === 'running' && j.progress ? ' ' + j.progress.toFixed(0) + '%' : '');
+
+  const bar = el.querySelector('.bar');
+  bar.style.display = j.status === 'running' ? '' : 'none';
+  bar.querySelector('i').style.width = (j.progress || 0) + '%';
+
+  const err = el.querySelector('.err');
+  if (j.error && j.status === 'error') { err.style.display = ''; err.textContent = j.error; }
+  else err.style.display = 'none';
+
+  el.querySelector('.jretry').style.display = (j.status === 'error' || j.status === 'stopped') ? '' : 'none';
+
+  const dl = el.querySelector('.dl');
+  if (j.status === 'done' && j.file) {
+    dl.style.display = '';
+    dl.href = `/files/${encodeURIComponent(j.folder)}/${encodeURIComponent(j.file)}`;
+  } else dl.style.display = 'none';
+}
+
+async function poll() {
+  let state;
+  try {
+    state = await (await fetch('/api/state')).json();
+  } catch { return; }
+
+  document.getElementById('folderName').textContent = state.folder;
+  lastPaused = state.paused;
+  const ss = document.getElementById('stopStart');
+  if (state.paused) { ss.textContent = '▶ Start'; ss.className = 'btn btn-green btn-sm'; }
+  else { ss.textContent = '⏸ Stop All'; ss.className = 'btn btn-red btn-sm'; }
+
+  const concSel = document.getElementById('conc');
+  if (!concSel.options.length) {
+    for (let i = 1; i <= state.maxConcurrency; i++) {
+      const o = document.createElement('option');
+      o.value = i; o.textContent = i;
+      concSel.appendChild(o);
+    }
+    concSel.value = state.concurrency;
+  }
+  const ck = document.getElementById('cookies');
+  if (document.activeElement !== ck) ck.value = state.cookiesBrowser || 'none';
+
+  const box = document.getElementById('jobs');
+  if (!state.jobs.length) {
+    jobEls.clear();
+    box.innerHTML = '<div class="empty">Abhi koi download nahi — upar links daal ke shuru karo</div>';
+    return;
+  }
+  if (box.querySelector('.empty')) box.innerHTML = '';
+
+  const seen = new Set();
+  for (const j of state.jobs) {
+    seen.add(j.id);
+    let el = jobEls.get(j.id);
+    if (!el) { el = makeJobEl(j); jobEls.set(j.id, el); box.appendChild(el); }
+    updateJobEl(el, j);
+  }
+  for (const [id, el] of jobEls) if (!seen.has(id)) { el.remove(); jobEls.delete(id); }
+}
+
+document.getElementById('conc').onchange = e =>
+  post('/api/settings', { concurrency: +e.target.value });
+document.getElementById('cookies').onchange = e =>
+  post('/api/settings', { cookiesBrowser: e.target.value });
+
+setInterval(poll, 1000);
+poll();
+</script>
+</body>
+</html>

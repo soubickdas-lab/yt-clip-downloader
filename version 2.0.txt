@@ -1,0 +1,4 @@
+YT Clip Downloader
+Version: 2.0
+Date: 2026-08-13
+Platforms: macOS (Apple Silicon + Intel), Windows 10/11 (x64)

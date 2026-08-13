@@ -1,0 +1,12 @@
+# Setup script inhe download karta hai - repo me nahi jaane chahiye (bahut bade hain)
+app/bin/
+app/runtime/
+
+# User ki downloaded clips + full-video cache
+app/downloads/
+
+node_modules/
+package-lock.json
+*.bak_*
+.claude/
+.DS_Store

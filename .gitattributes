@@ -1,0 +1,5 @@
+# Mac shell scripts hamesha LF rahen (CRLF hone par Mac par nahi chalte)
+*.command text eol=lf
+*.sh text eol=lf
+# Windows batch files hamesha CRLF
+*.bat text eol=crlf

@@ -1,5 +1,13 @@
 # Changelog
 
+## v2.2 (2026-08-13)
+
+- **Direct mode (naya default)**: clip ab stream-copy hoti hai, koi re-encode nahi — cut step ~9-12x fast. Start nearest keyframe par snap hota hai (milliseconds ka farak)
+- **Precise mode** ab bhi available hai (Mode dropdown) — exact frame-accurate timestamp chahiye to
+- **H.264 (avc1) preferred**: YouTube aksar AV1 deta tha jo decode karne mein bahut slow hai. Ab avc1+AAC pehle try hota hai — direct mode mein zero transcode
+- **Section download ab parallel fragments** (`--concurrent-fragments 8`) — pehle sirf full-video path par tha
+- **Live status counter** Downloads ke top-right mein: `✓ Downloaded 12/70`, `⟳ 2 running`, `✕ 3 failed`
+
 ## v2.1 (2026-08-13)
 
 - **Downloads ab system ke Downloads folder mein**: clips `~/Downloads/YT Clip Downloader/Folder N/` mein jaati hain, app folder ke andar nahi — update/reinstall par files apni jagah rehti hain

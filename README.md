@@ -36,6 +36,8 @@ GitHub se latest version aa jayega. Aapki **clips** bilkul safe hain — wo syst
 - **Total time**: Table aur bulk box mein clips ka total duration live dikhta hai
 - **Numbered folders**: Har batch apne folder mein (`Folder 1`, `Folder 2`...) — "+ New Folder" se naya
 - **Proper naming**: Files `1.mp4`, `2.mp4`, `3.mp4`... row number ke hisaab se
+- **Direct mode**: stream copy, koi re-encode nahi — sabse fast (default). Exact timestamp chahiye to **Precise** mode chuno
+- **Live status**: Downloads ke top-right par `✓ Downloaded 12/70 · ⟳ 2 running · ✕ 3 failed`
 - **Parallel downloads**: 1-10 ek saath (default 5)
 - **Smart speed**: Same video ke multiple clips = ek hi download, baaki instant local cut
 - **Auto-retry**: YouTube 403/bot-check errors par khud retry — Chrome cookies fallback ke saath

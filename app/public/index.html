@@ -18,6 +18,16 @@
   .sub { color: var(--muted); margin-bottom: 28px; }
   .card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 20px; margin-bottom: 20px; }
   .card h2 { font-size: 15px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 14px; }
+  .card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .stats { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 14px; }
+  .stat {
+    font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums;
+    padding: 5px 11px; border-radius: 20px; white-space: nowrap;
+    background: var(--panel2); border: 1px solid var(--border); color: var(--muted);
+  }
+  .stat-done { background: rgba(52,211,153,.12); color: var(--green); border-color: rgba(52,211,153,.3); }
+  .stat-run { background: rgba(251,191,36,.12); color: var(--amber); border-color: rgba(251,191,36,.3); }
+  .stat-fail { background: rgba(248,113,113,.12); color: var(--red); border-color: rgba(248,113,113,.3); }
   table { width: 100%; border-collapse: collapse; }
   th { text-align: left; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.8px; padding: 6px 8px; }
   td { padding: 5px 4px; }
@@ -91,6 +101,10 @@
       <button class="btn btn-ghost" onclick="addRow()">+ Add Row</button>
       <button class="btn btn-primary" id="go" onclick="submitJobs()">⬇ Download Clips</button>
       <span class="setting">Parallel: <select id="conc"></select></span>
+      <span class="setting" title="Direct = stream copy, koi re-encode nahi (sabse fast). Start nearest keyframe par snap hota hai.&#10;Precise = re-encode, exact timestamp — kaafi slow.">Mode: <select id="mode">
+        <option value="direct">⚡ Direct (fastest)</option>
+        <option value="precise">🎯 Precise (slow)</option>
+      </select></span>
       <span class="setting" title="Bot-check error aaye to browser cookies use hote hain (sirf aapki machine par)">Cookies: <select id="cookies">
         <option value="none">Auto</option>
         <option value="chrome">Chrome</option>
@@ -115,7 +129,10 @@
   </div>
 
   <div class="card">
-    <h2>Downloads</h2>
+    <div class="card-head">
+      <h2>Downloads</h2>
+      <div class="stats" id="stats"></div>
+    </div>
     <div class="toolbar">
       <span class="folder-chip">📁 <b id="folderName">Folder 1</b></span>
       <button class="btn btn-ghost btn-sm" onclick="newFolder()" title="Naya folder — numbering 1 se restart">+ New Folder</button>
@@ -336,7 +353,7 @@ function updateJobEl(el, j) {
   el.querySelector('.job-meta').textContent = meta.filter(Boolean).join(' · ');
 
   const badge = el.querySelector('.badge');
-  const phaseLabels = { processing: 'Processing', 'full-download': 'Full DL (shared)', cutting: 'Cutting ✂', 'retrying with Chrome cookies': 'Cookies retry' };
+  const phaseLabels = { processing: 'Processing', 'full-download': 'Full DL (shared)', cutting: 'Cutting ✂', trimming: 'Trimming ⚡', 'retrying with Chrome cookies': 'Cookies retry' };
   const labels = {
     queued: 'Queued',
     running: j.phase && j.phase.startsWith('retrying') ? 'Retrying' : (phaseLabels[j.phase] || 'Downloading'),
@@ -361,6 +378,18 @@ function updateJobEl(el, j) {
     dl.style.display = '';
     dl.href = `/files/${encodeURIComponent(j.folder)}/${encodeURIComponent(j.file)}`;
   } else dl.style.display = 'none';
+}
+
+function renderStats(jobs) {
+  const box = document.getElementById('stats');
+  if (!jobs.length) { box.innerHTML = ''; return; }
+  const n = s => jobs.filter(j => j.status === s).length;
+  const done = n('done'), failed = n('error'), running = n('running'), stopped = n('stopped');
+  const pills = [`<span class="stat stat-done">✓ Downloaded ${done}/${jobs.length}</span>`];
+  if (running) pills.push(`<span class="stat stat-run">⟳ ${running} running</span>`);
+  if (failed) pills.push(`<span class="stat stat-fail">✕ ${failed} failed</span>`);
+  if (stopped) pills.push(`<span class="stat">⏸ ${stopped} stopped</span>`);
+  box.innerHTML = pills.join('');
 }
 
 async function poll() {
@@ -390,6 +419,10 @@ async function poll() {
   }
   const ck = document.getElementById('cookies');
   if (document.activeElement !== ck) ck.value = state.cookiesBrowser || 'none';
+  const md = document.getElementById('mode');
+  if (document.activeElement !== md) md.value = state.mode || 'direct';
+
+  renderStats(state.jobs);
 
   const box = document.getElementById('jobs');
   if (!state.jobs.length) {
@@ -413,6 +446,8 @@ document.getElementById('conc').onchange = e =>
   post('/api/settings', { concurrency: +e.target.value });
 document.getElementById('cookies').onchange = e =>
   post('/api/settings', { cookiesBrowser: e.target.value });
+document.getElementById('mode').onchange = e =>
+  post('/api/settings', { mode: e.target.value });
 
 setInterval(poll, 1000);
 poll();

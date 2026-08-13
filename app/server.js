@@ -44,6 +44,10 @@ const MAX_ATTEMPTS = 3; // auto-retry on transient YouTube 403/ffmpeg failures
 let concurrency = 5;
 let paused = false;
 let cookiesBrowser = 'none'; // bot-check aane par auto Chrome try hota hai
+// 'direct'  = stream copy, koi re-encode nahi — sabse fast, start nearest
+//             keyframe par snap hota hai (thoda extra head aa sakta hai)
+// 'precise' = re-encode, frame-accurate timestamps — slow
+let mode = 'direct';
 
 // deno (n-challenge solver) bin/ mein hai — PATH mein daalo
 const SPAWN_ENV = { ...process.env, PATH: BIN + path.delimiter + (process.env.PATH || '') };
@@ -149,7 +153,17 @@ function cleanPartials(job) {
   }
 }
 
-const FORMAT = 'bv*[height<=1080][ext=mp4]+ba[ext=m4a]/bv*[height<=1080]+ba/b[height<=1080]/b';
+// H.264 (avc1) + AAC ko pehle try karo. YouTube warna aksar AV1 deta hai jo
+// decode karne mein bahut slow hai — aur avc1/mp4a seedha mp4 mein stream-copy
+// ho jaata hai, yaani direct mode mein zero re-encode.
+const FORMAT = [
+  'bv*[height<=1080][vcodec^=avc1]+ba[acodec^=mp4a]',
+  'bv*[height<=1080][vcodec^=avc1]+ba',
+  'bv*[height<=1080][ext=mp4]+ba[ext=m4a]',
+  'bv*[height<=1080]+ba',
+  'b[height<=1080]',
+  'b',
+].join('/');
 // Cache app folder ke andar hi rehta hai — user ke Downloads folder mein
 // sirf uski clips dikhein, ye internal scratch space nahi.
 const CACHE = path.join(ROOT, 'cache');
@@ -196,8 +210,16 @@ function probeDuration(file) {
   });
 }
 
+// Cut ke output args. direct = stream copy (instant), precise = re-encode.
+function encodeArgs() {
+  return mode === 'direct'
+    ? ['-c', 'copy', '-movflags', '+faststart']
+    : ['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18',
+       '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart'];
+}
+
 // FAST PATH: section stream-copy (no re-encode during network read = fast),
-// phir offset-formula se frame-accurate local cut
+// phir offset-formula se local cut
 async function attemptSection(job) {
   const len = job.end - job.start;
   const secTemplate = path.join(job.dir, `${job.num}.sec.%(ext)s`);
@@ -207,6 +229,7 @@ async function attemptSection(job) {
     '--ffmpeg-location', FFMPEG,
     '--newline', '--no-playlist',
     '--retries', '10', '--fragment-retries', '10',
+    '--concurrent-fragments', '8',
     '--downloader-args', 'ffmpeg_i:-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
     ...cookieArgs(job),
     '-f', FORMAT,
@@ -221,11 +244,10 @@ async function attemptSection(job) {
   // stream copy keyframe se shuru hota hai (thoda pehle) — extra head = actual duration - requested
   const dv = await probeDuration(secFile);
   const offset = Math.max(0, dv - len);
-  job.phase = 'cutting';
+  job.phase = mode === 'direct' ? 'trimming' : 'cutting';
   const cut = await spawnTracked(job, FFMPEG, [
     '-y', '-ss', String(offset), '-t', String(len), '-i', secFile,
-    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18',
-    '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart',
+    ...encodeArgs(),
     path.join(job.dir, `${job.num}.mp4`),
   ]);
   try { fs.rmSync(secFile); } catch {}
@@ -301,14 +323,13 @@ function ensureCachedVideo(job) {
   return entry.promise;
 }
 
-// local accurate cut from cached full video (re-encode = frame-perfect timestamps)
+// local cut from cached full video
 function cutClip(job, src) {
   const out = path.join(job.dir, `${job.num}.mp4`);
   const args = ['-y', '-ss', String(job.start)];
   if (job.end !== null) args.push('-to', String(job.end));
-  args.push('-i', src, '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18',
-    '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', out);
-  job.phase = 'cutting';
+  args.push('-i', src, ...encodeArgs(), out);
+  job.phase = mode === 'direct' ? 'trimming' : 'cutting';
   return spawnTracked(job, FFMPEG, args);
 }
 
@@ -457,6 +478,7 @@ const server = http.createServer(async (req, res) => {
       concurrency,
       maxConcurrency: MAX_CONCURRENCY,
       cookiesBrowser,
+      mode,
     });
   }
 
@@ -556,7 +578,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === 'GET' && url.pathname === '/api/settings') {
-    return json(res, 200, { concurrency, max: MAX_CONCURRENCY, cookiesBrowser });
+    return json(res, 200, { concurrency, max: MAX_CONCURRENCY, cookiesBrowser, mode });
   }
 
   if (req.method === 'POST' && url.pathname === '/api/settings') {
@@ -566,7 +588,8 @@ const server = http.createServer(async (req, res) => {
     if (body && ['none', 'chrome', 'safari', 'brave', 'edge', 'firefox'].includes(body.cookiesBrowser)) {
       cookiesBrowser = body.cookiesBrowser;
     }
-    return json(res, 200, { concurrency, cookiesBrowser });
+    if (body && ['direct', 'precise'].includes(body.mode)) mode = body.mode;
+    return json(res, 200, { concurrency, cookiesBrowser, mode });
   }
 
   // /files/<folder>/<name>

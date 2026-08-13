@@ -5,7 +5,7 @@ set -e
 cd "$(dirname "$0")/.."
 
 BIN="app/bin"
-mkdir -p "$BIN" app/downloads
+mkdir -p "$BIN"
 
 ARCH=$(uname -m)
 echo "==> macOS setup shuru ($ARCH)..."

@@ -5,7 +5,6 @@ setlocal
 cd /d "%~dp0.."
 
 if not exist app\bin mkdir app\bin
-if not exist app\downloads mkdir app\downloads
 
 echo ==^> Windows setup shuru...
 

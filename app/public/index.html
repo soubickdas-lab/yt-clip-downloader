@@ -126,6 +126,7 @@
       <button class="btn btn-ghost btn-sm" onclick="post('/api/clear')">Clear Finished</button>
       <button class="btn btn-red btn-sm" onclick="clearAll()">✕ Clear Queue All</button>
     </div>
+    <p class="hint" id="savePath"></p>
     <div id="jobs"><div class="empty">Abhi koi download nahi — upar links daal ke shuru karo</div></div>
   </div>
 </div>
@@ -369,6 +370,10 @@ async function poll() {
   } catch { return; }
 
   document.getElementById('folderName').textContent = state.folder;
+  if (state.downloadsRoot) {
+    document.getElementById('savePath').textContent =
+      `Files yahan save hoti hain: ${state.downloadsRoot}`;
+  }
   lastPaused = state.paused;
   const ss = document.getElementById('stopStart');
   if (state.paused) { ss.textContent = '▶ Start'; ss.className = 'btn btn-green btn-sm'; }

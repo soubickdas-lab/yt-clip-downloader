@@ -43,7 +43,8 @@ unzip -q "$TMP/update.zip" -d "$TMP" || die "Zip extract nahi ho paya."
 rm -f "$ROOT"/version\ *.txt
 
 # Nayi files copy karo. --delete use NAHI kar rahe — isliye aapke
-# app/bin (tools), app/downloads (clips) aur app/runtime safe rehte hain.
+# app/bin (tools), app/cache aur app/runtime safe rehte hain.
+# (Clips waise bhi system ke Downloads folder mein hoti hain, yahan nahi.)
 rsync -a --exclude node_modules --exclude .git \
     "$TMP/yt-clip-downloader-$BRANCH/" "$ROOT/" || die "Files copy nahi ho payi."
 

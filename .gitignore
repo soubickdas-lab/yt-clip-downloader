@@ -2,7 +2,10 @@
 app/bin/
 app/runtime/
 
-# User ki downloaded clips + full-video cache
+# Full-video cache (internal scratch space)
+app/cache/
+
+# Purane installs ki clips (ab system ke Downloads folder mein jaati hain)
 app/downloads/
 
 node_modules/

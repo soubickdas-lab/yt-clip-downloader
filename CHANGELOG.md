@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.1 (2026-08-13)
+
+- **Downloads ab system ke Downloads folder mein**: clips `~/Downloads/YT Clip Downloader/Folder N/` mein jaati hain, app folder ke andar nahi — update/reinstall par files apni jagah rehti hain
+- Windows par relocated Downloads folder registry se auto-detect hota hai
+- Full-video cache `app/downloads/.cache/` se `app/cache/` mein shift — user ke Downloads folder mein sirf clips dikhti hain
+- App mein exact save path dikhta hai (Downloads section ke neeche)
+
 ## v2.0 (2026-08-13)
 
 - **Cross-platform**: Windows + macOS support, setup/start scripts dono ke liye

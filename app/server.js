@@ -1,8 +1,9 @@
 const http = require('http');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
-const { spawn } = require('child_process');
+const { spawn, execFileSync } = require('child_process');
 
 const ROOT = __dirname;
 const BIN = path.join(ROOT, 'bin');
@@ -10,7 +11,31 @@ const EXE = process.platform === 'win32' ? '.exe' : '';
 const YTDLP = path.join(BIN, 'yt-dlp' + EXE);
 const FFMPEG = path.join(BIN, 'ffmpeg' + EXE);
 const FFPROBE = path.join(BIN, 'ffprobe' + EXE);
-const DOWNLOADS = path.join(ROOT, 'downloads');
+
+// Clips system ke Downloads folder mein jaati hain, app folder ke andar nahi —
+// taaki update/reinstall par bhi files apni jagah rahein.
+// Windows par user Downloads ko kahin aur move kar sakta hai, isliye pehle
+// registry se asli path poochho; na mile to ~/Downloads.
+function userDownloadsDir() {
+  if (process.platform === 'win32') {
+    for (const key of ['User Shell Folders', 'Shell Folders']) {
+      try {
+        const out = execFileSync('reg', [
+          'query', `HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\${key}`,
+          '/v', '{374DE290-123F-4565-9164-39C4925E467B}',
+        ], { encoding: 'utf8', windowsHide: true, stdio: ['ignore', 'pipe', 'ignore'] });
+        const m = out.match(/REG_(?:EXPAND_)?SZ\s+(.+)/);
+        if (m) {
+          const p = m[1].trim().replace(/%([^%]+)%/g, (_, v) => process.env[v] || '');
+          if (p && fs.existsSync(p)) return p;
+        }
+      } catch {}
+    }
+  }
+  return path.join(os.homedir(), 'Downloads');
+}
+
+const DOWNLOADS = path.join(userDownloadsDir(), 'YT Clip Downloader');
 const PUBLIC = path.join(ROOT, 'public');
 const PORT = 3777;
 const MAX_CONCURRENCY = 10;
@@ -34,24 +59,36 @@ function cookieArgs(job) {
   return b && b !== 'none' ? ['--cookies-from-browser', b] : [];
 }
 
-fs.mkdirSync(DOWNLOADS, { recursive: true });
+// DOWNLOADS user ke apne Downloads folder mein hai — wahan folder kabhi bhi
+// user, OneDrive ya Storage Sense hata sakta hai. Isliye har baar use karne se
+// pehle bana lo, aur read fail ho to crash mat karo.
+function ensureDir(dir) {
+  try { fs.mkdirSync(dir, { recursive: true }); return true; } catch { return false; }
+}
+
+function listDir(dir) {
+  ensureDir(dir);
+  try { return fs.readdirSync(dir); } catch { return []; }
+}
+
+ensureDir(DOWNLOADS);
 
 // ---- batch folders: "Folder 1", "Folder 2", ... ----
 function scanFolders() {
-  return fs.readdirSync(DOWNLOADS)
+  return listDir(DOWNLOADS)
     .map(n => n.match(/^Folder (\d+)$/))
     .filter(Boolean)
     .map(m => parseInt(m[1], 10));
 }
 
 let batchNum = Math.max(0, ...scanFolders()) || 1;
-fs.mkdirSync(path.join(DOWNLOADS, `Folder ${batchNum}`), { recursive: true });
+ensureDir(path.join(DOWNLOADS, `Folder ${batchNum}`));
 
 function batchDir() { return path.join(DOWNLOADS, `Folder ${batchNum}`); }
 
 // next file number = continue after highest existing "N.mp4" in current folder
 function nextSeq() {
-  const nums = fs.readdirSync(batchDir())
+  const nums = listDir(batchDir())
     .map(n => n.match(/^(\d+)\.[a-z0-9]+$/i))
     .filter(Boolean)
     .map(m => parseInt(m[1], 10));
@@ -105,7 +142,7 @@ function pump() {
 
 function cleanPartials(job) {
   // remove old/partial/temp files for this number before (re)downloading
-  for (const f of fs.readdirSync(job.dir)) {
+  for (const f of listDir(job.dir)) {
     if (f.split('.')[0] === String(job.num)) {
       try { fs.rmSync(path.join(job.dir, f)); } catch {}
     }
@@ -113,8 +150,10 @@ function cleanPartials(job) {
 }
 
 const FORMAT = 'bv*[height<=1080][ext=mp4]+ba[ext=m4a]/bv*[height<=1080]+ba/b[height<=1080]/b';
-const CACHE = path.join(DOWNLOADS, '.cache');
-fs.mkdirSync(CACHE, { recursive: true });
+// Cache app folder ke andar hi rehta hai — user ke Downloads folder mein
+// sirf uski clips dikhein, ye internal scratch space nahi.
+const CACHE = path.join(ROOT, 'cache');
+ensureDir(CACHE);
 
 function videoKey(url) {
   const m = url.match(/(?:youtu\.be\/|[?&]v=|\/shorts\/|\/embed\/|\/live\/)([\w-]{11})/);
@@ -165,7 +204,7 @@ async function attemptSection(job) {
   const secFile = path.join(job.dir, `${job.num}.sec.mp4`);
 
   const dl = await spawnTracked(job, YTDLP, [
-    '--ffmpeg-location', BIN,
+    '--ffmpeg-location', FFMPEG,
     '--newline', '--no-playlist',
     '--retries', '10', '--fragment-retries', '10',
     '--downloader-args', 'ffmpeg_i:-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
@@ -196,7 +235,7 @@ async function attemptSection(job) {
 // full video download (jobs without timestamp) — straight to destination
 function attemptFull(job) {
   const args = [
-    '--ffmpeg-location', BIN,
+    '--ffmpeg-location', FFMPEG,
     '--newline', '--no-playlist',
     '--retries', '10', '--fragment-retries', '10',
     '--concurrent-fragments', '8',
@@ -226,7 +265,7 @@ function ensureCachedVideo(job) {
   entry = { jobs: new Set([job]), proc: null };
   entry.promise = new Promise(resolve => {
     const args = [
-      '--ffmpeg-location', BIN,
+      '--ffmpeg-location', FFMPEG,
       '--newline', '--no-playlist',
       '--retries', '10', '--fragment-retries', '10',
       '--concurrent-fragments', '8',
@@ -304,6 +343,14 @@ async function runJob(job) {
   job.status = 'running';
   job.error = null;
   job.phase = null;
+
+  // folder beech mein delete/move ho gaya ho to dobara bana do
+  if (!ensureDir(job.dir)) {
+    job.status = 'error';
+    job.error = `Download folder nahi ban paya: ${job.dir}`;
+    return;
+  }
+  ensureDir(CACHE);
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     job.attempt = attempt;
@@ -405,6 +452,7 @@ const server = http.createServer(async (req, res) => {
     return json(res, 200, {
       jobs: [...jobs.values()].map(publicJob).sort((a, b) => a.id - b.id),
       folder: `Folder ${batchNum}`,
+      downloadsRoot: DOWNLOADS,
       paused,
       concurrency,
       maxConcurrency: MAX_CONCURRENCY,
@@ -497,11 +545,12 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === 'POST' && url.pathname === '/api/folder/new') {
     batchNum = Math.max(batchNum, ...scanFolders()) + 1;
-    fs.mkdirSync(batchDir(), { recursive: true });
+    ensureDir(batchDir());
     return json(res, 200, { folder: `Folder ${batchNum}` });
   }
 
   if (req.method === 'POST' && url.pathname === '/api/folder/open') {
+    ensureDir(batchDir());
     openInFileManager(batchDir());
     return json(res, 200, { ok: true });
   }
@@ -543,4 +592,12 @@ const server = http.createServer(async (req, res) => {
   res.end('not found');
 });
 
-server.listen(PORT, () => console.log(`Clip downloader running at http://localhost:${PORT}`));
+// Local app hai — koi unexpected fs/spawn error poori queue na le doobe.
+// (Downloads folder user ke control mein hai, kabhi bhi gayab ho sakta hai.)
+process.on('uncaughtException', e => console.error('[warn] uncaught:', (e && e.message) || e));
+process.on('unhandledRejection', e => console.error('[warn] unhandled:', (e && e.message) || e));
+
+server.listen(PORT, () => {
+  console.log(`Clip downloader running at http://localhost:${PORT}`);
+  console.log(`Clips save location: ${DOWNLOADS}`);
+});

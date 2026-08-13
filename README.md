@@ -27,7 +27,7 @@ Naya version aane par app ko dobara download karne ki zaroorat nahi:
 - **macOS** — `mac/update.command` double-click karo
 - **Windows** — `windows\update.bat` double-click karo
 
-GitHub se latest version aa jayega. Aapki **downloaded clips** (`app/downloads/`) aur **tools** (`app/bin/`) waise ke waise rehte hain — sirf app ki files update hoti hain.
+GitHub se latest version aa jayega. Aapki **clips** bilkul safe hain — wo system ke Downloads folder mein hoti hain, app folder ke andar nahi. **Tools** (`app/bin/`) bhi waise ke waise rehte hain — sirf app ki files update hoti hain.
 
 ## Features
 
@@ -52,10 +52,15 @@ GitHub se latest version aa jayega. Aapki **downloaded clips** (`app/downloads/`
 
 ## Files Kahan Milti Hain
 
-`app/downloads/Folder N/` mein — ya app ke andar **"Open in Finder/Explorer"** button dabao.
+Aapke **system ke Downloads folder** mein — app folder ke andar nahi:
+
+- **Windows** — `C:\Users\<naam>\Downloads\YT Clip Downloader\Folder N\`
+- **macOS** — `~/Downloads/YT Clip Downloader/Folder N/`
+
+Ya app ke andar **"Open in Finder/Explorer"** button dabao — seedha wahi folder khul jayega. Exact path app mein Downloads section ke neeche bhi likha rehta hai.
 
 ## Troubleshooting
 
 - **"Sign in to confirm you're not a bot"**: App khud Chrome cookies se retry karta hai. Chrome installed hona chahiye aur usme YouTube khula ho (login zaroori nahi). Cookies dropdown se browser change kar sakte ho.
 - **Downloads slow/fail**: Retry All Failed dabao — YouTube ke temporary blocks aksar dusri koshish mein nikal jaate hain.
-- **Space kam**: `app/downloads/.cache/` folder delete kar sakte ho — yeh sirf speed ke liye full videos cache karta hai.
+- **Space kam**: `app/cache/` folder delete kar sakte ho — yeh sirf speed ke liye full videos cache karta hai.

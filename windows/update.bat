@@ -45,7 +45,8 @@ rem Purani version file delete karo
 del /q "version *.txt" >nul 2>nul
 
 rem Nayi files copy karo. /PURGE use NAHI kar rahe - isliye aapke
-rem app\bin (tools), app\downloads (clips) aur app\runtime safe rehte hain.
+rem app\bin (tools), app\cache aur app\runtime safe rehte hain.
+rem (Clips waise bhi system ke Downloads folder mein hoti hain, yahan nahi.)
 robocopy "%TMP%\yt-clip-downloader-%BRANCH%" "%ROOT%" /E /XD node_modules .git >nul
 if %errorlevel% geq 8 (
     echo ERROR: Files copy nahi ho payi.

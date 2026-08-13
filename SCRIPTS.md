@@ -21,9 +21,17 @@
 - `app/server.js` — Node.js server (zero dependencies, npm install ki zaroorat nahi)
 - `app/public/index.html` — browser UI
 - `app/bin/` — downloaded tools (yt-dlp, ffmpeg, ffprobe, deno)
-- `app/downloads/` — aapki clips, numbered folders mein
-- `app/downloads/.cache/` — speed ke liye full-video cache (delete karna safe hai)
+- `app/cache/` — speed ke liye full-video cache (delete karna safe hai)
 - `app/runtime/` — portable Node.js (sirf tab jab system par Node nahi tha)
+
+## Clips kahan save hoti hain
+
+App folder ke andar **nahi** — system ke apne Downloads folder mein:
+
+- **Windows** — `C:\Users\<naam>\Downloads\YT Clip Downloader\Folder N\`
+- **macOS** — `~/Downloads/YT Clip Downloader/Folder N/`
+
+Windows par agar aapne Downloads folder kahin aur move kiya hai, app registry se asli path khud dhoondh leta hai. App ke andar exact path bhi dikhta hai (Downloads section mein).
 
 ## Port change karna ho?
 

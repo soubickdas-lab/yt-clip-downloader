@@ -29,6 +29,18 @@ Naya version aane par app ko dobara download karne ki zaroorat nahi:
 
 GitHub se latest version aa jayega. Aapki **clips** bilkul safe hain — wo system ke Downloads folder mein hoti hain, app folder ke andar nahi. **Tools** (`app/bin/`) bhi waise ke waise rehte hain — sirf app ki files update hoti hain.
 
+## Remote Access (optional)
+
+App ko sirf apne PC par chalana ho to kuch karne ki zaroorat nahi — `localhost:3777` bina kisi key ke khulta hai.
+
+Agar aap ise Cloudflare tunnel se bahar expose karte ho (jaise `ytclip.aipoint.online`), to remote requests par **access key** maangi jaati hai:
+
+- Key pehli baar app chalne par apne aap ban jaati hai: `app/access-key.txt`
+- Server start hone par terminal me bhi print hoti hai
+- Remote browser me app kholte hi key poochhi jayegi, ek baar daalne par cookie save ho jaati hai
+
+Key ke bina koi bhi aapke PC se downloads chala sakta tha — isliye ye zaroori hai. Nayi key chahiye to `app/access-key.txt` delete karke app restart kar do.
+
 ## Features
 
 - **Clip download**: Link + timestamp (`1:20-2:45`) daalo — sirf wohi hissa download hota hai, poora video nahi

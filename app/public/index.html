@@ -392,10 +392,30 @@ function renderStats(jobs) {
   box.innerHTML = pills.join('');
 }
 
+let askingKey = false;
+async function askKey(msg) {
+  if (askingKey) return;
+  askingKey = true;
+  try {
+    for (;;) {
+      const k = prompt(msg || 'Ye app remote se khul rahi hai.\nAccess key daalo (app chalane wale PC par app/access-key.txt mein hai):');
+      if (k === null) return;
+      const r = await fetch('/api/auth', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: k.trim() }),
+      });
+      if (r.ok) return;
+      msg = 'Galat key. Dobara try karo:';
+    }
+  } finally { askingKey = false; }
+}
+
 async function poll() {
   let state;
   try {
-    state = await (await fetch('/api/state')).json();
+    const r = await fetch('/api/state');
+    if (r.status === 401) { await askKey(); return; }
+    state = await r.json();
   } catch { return; }
 
   document.getElementById('folderName').textContent = state.folder;

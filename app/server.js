@@ -37,6 +37,48 @@ function userDownloadsDir() {
 
 const DOWNLOADS = path.join(userDownloadsDir(), 'YT Clip Downloader');
 const PUBLIC = path.join(ROOT, 'public');
+
+// ---- Access key (sirf remote/tunnel requests ke liye) ----
+// Localhost par app bina key ke chalta hai. Jab request Cloudflare tunnel se
+// aati hai (CF-Connecting-IP header lagta hai) tab key maangi jaati hai —
+// warna public URL par koi bhi aapke PC se downloads chala sakta hai.
+const KEY_FILE = path.join(ROOT, 'access-key.txt');
+
+function loadAccessKey() {
+  try {
+    const k = fs.readFileSync(KEY_FILE, 'utf8').trim();
+    if (k) return k;
+  } catch {}
+  const k = crypto.randomBytes(9).toString('base64url'); // 12 chars
+  try { fs.writeFileSync(KEY_FILE, k + '\n', 'utf8'); } catch {}
+  return k;
+}
+
+const ACCESS_KEY = loadAccessKey();
+
+function isRemote(req) {
+  return !!(req.headers['cf-connecting-ip'] || req.headers['cf-ray']);
+}
+
+function cookieKey(req) {
+  const raw = req.headers.cookie || '';
+  const m = raw.match(/(?:^|;\s*)ytcd_key=([^;]+)/);
+  return m ? decodeURIComponent(m[1]) : '';
+}
+
+function sameKey(given) {
+  const a = Buffer.from(String(given || ''), 'utf8');
+  const b = Buffer.from(ACCESS_KEY, 'utf8');
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+function keyOk(req) {
+  return sameKey(req.headers['x-access-key'] || cookieKey(req));
+}
+
+function authorized(req) {
+  return !isRemote(req) || keyOk(req);
+}
 const PORT = 3777;
 const MAX_CONCURRENCY = 10;
 const MAX_ATTEMPTS = 3; // auto-retry on transient YouTube 403/ffmpeg failures
@@ -469,6 +511,22 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
   const parts = url.pathname.split('/').filter(Boolean);
 
+  // remote se aaya hai to key check karo — key daalne ka endpoint khud khula rehta hai
+  if (req.method === 'POST' && url.pathname === '/api/auth') {
+    const body = await readBody(req) || {};
+    const given = String(body.key || '');
+    if (!sameKey(given)) return json(res, 401, { error: 'galat key' });
+    res.writeHead(200, {
+      'Content-Type': 'application/json',
+      'Set-Cookie': `ytcd_key=${encodeURIComponent(given)}; Path=/; Max-Age=31536000; HttpOnly; SameSite=Lax`,
+    });
+    return res.end(JSON.stringify({ ok: true }));
+  }
+
+  if ((parts[0] === 'api' || parts[0] === 'files') && !authorized(req)) {
+    return json(res, 401, { error: 'access key chahiye' });
+  }
+
   if (req.method === 'GET' && url.pathname === '/api/state') {
     return json(res, 200, {
       jobs: [...jobs.values()].map(publicJob).sort((a, b) => a.id - b.id),
@@ -623,4 +681,5 @@ process.on('unhandledRejection', e => console.error('[warn] unhandled:', (e && e
 server.listen(PORT, () => {
   console.log(`Clip downloader running at http://localhost:${PORT}`);
   console.log(`Clips save location: ${DOWNLOADS}`);
+  console.log(`Remote access key   : ${ACCESS_KEY}   (app/access-key.txt)`);
 });

@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.3 (2026-08-13)
+
+- **Remote access key**: app ab Cloudflare tunnel ke peeche safely chal sakta hai. Localhost par kuch nahi badla (koi key nahi), par remote request (CF-Connecting-IP) par key maangi jaati hai
+- Key pehli baar apne aap generate hoti hai (`app/access-key.txt`), startup par print hoti hai
+- `/api/*` aur `/files/*` dono protected — clips bhi bina key ke download nahi hoti
+- Key cookie me save hoti hai, to `<a download>` links bhi kaam karte hain
+
 ## v2.2 (2026-08-13)
 
 - **Direct mode (naya default)**: clip ab stream-copy hoti hai, koi re-encode nahi — cut step ~9-12x fast. Start nearest keyframe par snap hota hai (milliseconds ka farak)

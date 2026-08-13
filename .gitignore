@@ -2,6 +2,12 @@
 app/bin/
 app/runtime/
 
+# Remote access key — har machine par apni alag generate hoti hai
+app/access-key.txt
+
+# Tunnel config — machine-specific (tunnel id + credentials path)
+cloudflare-config.yml
+
 # Full-video cache (internal scratch space)
 app/cache/
 

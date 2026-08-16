@@ -75,6 +75,7 @@ Ya app ke andar **"Open in Finder/Explorer"** button dabao — seedha wahi folde
 
 ## Troubleshooting
 
-- **"Sign in to confirm you're not a bot"**: App khud Chrome cookies se retry karta hai. Chrome installed hona chahiye aur usme YouTube khula ho (login zaroori nahi). Cookies dropdown se browser change kar sakte ho.
+- **"Sign in to confirm you're not a bot"**: App khud retry karta hai — pehle alternate YouTube player clients se (bina cookies ke, aksar isi se nikal jata hai), phir browser cookies se. Cookies dropdown se browser change kar sakte ho.
+- **"Could not copy Chrome cookie database"**: Chalu Chrome ki cookie DB locked hoti hai. Chrome band karke retry karo — ya (zyada reliable) browser extension se cookies export karke `app/cookies.txt` me rakh do, phir app hamesha wahi use karega.
 - **Downloads slow/fail**: Retry All Failed dabao — YouTube ke temporary blocks aksar dusri koshish mein nikal jaate hain.
 - **Space kam**: `app/cache/` folder delete kar sakte ho — yeh sirf speed ke liye full videos cache karta hai.

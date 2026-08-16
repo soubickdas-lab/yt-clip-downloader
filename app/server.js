@@ -100,9 +100,24 @@ function openInFileManager(dir) {
   else spawn('xdg-open', [dir]);
 }
 
+// Agar aap app/cookies.txt rakh do (browser extension se export kiya hua) to
+// wo hamesha use hoga — ye browser se cookies padhne se kahin zyada reliable
+// hai, kyunki chalu Chrome ki cookie DB locked/encrypted hoti hai.
+const COOKIE_FILE = path.join(ROOT, 'cookies.txt');
+
 function cookieArgs(job) {
+  if (fs.existsSync(COOKIE_FILE)) return ['--cookies', COOKIE_FILE];
   const b = (job && job.cookiesOverride) || cookiesBrowser;
   return b && b !== 'none' ? ['--cookies-from-browser', b] : [];
+}
+
+// Bot-check aane par yeh clients add karke retry karte hain. "default" saath
+// rakhna zaroori hai — akela android sirf 360p deta hai, default ke saath
+// union banta hai to 1080p bana rehta hai.
+const ALT_CLIENTS = 'default,android,tv';
+
+function clientArgs(job) {
+  return job.clientOverride ? ['--extractor-args', `youtube:player_client=${job.clientOverride}`] : [];
 }
 
 // DOWNLOADS user ke apne Downloads folder mein hai — wahan folder kabhi bhi
@@ -274,6 +289,7 @@ async function attemptSection(job) {
     '--concurrent-fragments', '8',
     '--downloader-args', 'ffmpeg_i:-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
     ...cookieArgs(job),
+    ...clientArgs(job),
     '-f', FORMAT,
     '--merge-output-format', 'mp4',
     '-o', secTemplate,
@@ -304,6 +320,7 @@ function attemptFull(job) {
     '--retries', '10', '--fragment-retries', '10',
     '--concurrent-fragments', '8',
     ...cookieArgs(job),
+    ...clientArgs(job),
     '-f', FORMAT,
     '--merge-output-format', 'mp4',
     '-o', path.join(job.dir, `${job.num}.%(ext)s`),
@@ -334,6 +351,7 @@ function ensureCachedVideo(job) {
       '--retries', '10', '--fragment-retries', '10',
       '--concurrent-fragments', '8',
       ...cookieArgs(job),
+    ...clientArgs(job),
       '-f', FORMAT,
       '--merge-output-format', 'mp4',
       '-o', path.join(CACHE, `${key}.%(ext)s`),
@@ -452,12 +470,31 @@ async function runJob(job) {
 
     if (result.code === 0 && finishIfDone(job)) return;
 
-    job.error = extractError(result.errBuf, 'download failed');
+    const err = extractError(result.errBuf, 'download failed');
+    const botCheck = /sign in to confirm|not a bot|failed to extract any player response|use --cookies/i.test(err);
+    const cookieFail = /could not copy .*cookie|cookie database|failed to decrypt|no such (?:file|table).*cookie/i.test(err);
 
-    // YouTube bot-check → Chrome cookies ke saath auto-retry
-    if (/sign in to confirm|not a bot|cookies/i.test(job.error) && !job.cookiesOverride && cookiesBrowser === 'none') {
+    if (cookieFail) {
+      // Browser se cookies nahi padh paye (chalu Chrome ki DB locked/encrypted
+      // hoti hai). Asli wajah bot-check thi — wahi dikhao, warna user confuse
+      // hota hai ki cookies ka masla hai.
+      job.error = (job.botError ? job.botError + ' — ' : '') +
+        'browser se cookies nahi padh paye (Chrome band karke dekho, ya ' +
+        'app/cookies.txt me cookies export karke rakho)';
+    } else {
+      job.error = err;
+    }
+
+    if (botCheck) job.botError = err;
+
+    // Retry ladder: normal → alternate player clients → browser/file cookies
+    if (botCheck && !job.clientOverride) {
+      job.clientOverride = ALT_CLIENTS;
+      job.phase = 'retrying (alternate client)';
+    } else if ((botCheck || cookieFail) && !job.cookiesOverride &&
+               cookiesBrowser === 'none' && !fs.existsSync(COOKIE_FILE)) {
       job.cookiesOverride = 'chrome';
-      job.phase = 'retrying with Chrome cookies';
+      job.phase = 'retrying with browser cookies';
     } else if (attempt < MAX_ATTEMPTS) {
       job.phase = `retrying (${attempt + 1}/${MAX_ATTEMPTS})`;
     }

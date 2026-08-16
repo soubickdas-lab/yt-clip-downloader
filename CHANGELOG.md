@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.4 (2026-08-13)
+
+- **Bot-check fix**: pehle bot-check aate hi seedha Chrome cookies try hote the. Chalu Chrome ki cookie DB locked/encrypted hoti hai, to wo fail ho jata tha aur user ko *"Could not copy Chrome cookie database"* dikhta tha — asli wajah (bot-check) chhup jati thi
+- Naya retry ladder: **normal → alternate player clients → cookies**. Alternate clients (`default,android,tv`) bina kisi cookie ke bot-check nikal dete hain, aur `default` saath hone se 1080p bhi bana rehta hai
+- Cookie step fail ho to ab **asli error** dikhta hai, saath me kya karna hai wo bhi
+- **`app/cookies.txt`** support: file rakh do to wo hamesha use hogi (browser se cookies padhne se zyada reliable)
+
 ## v2.3 (2026-08-13)
 
 - **Remote access key**: app ab Cloudflare tunnel ke peeche safely chal sakta hai. Localhost par kuch nahi badla (koi key nahi), par remote request (CF-Connecting-IP) par key maangi jaati hai

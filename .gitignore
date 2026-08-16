@@ -19,3 +19,6 @@ package-lock.json
 *.bak_*
 .claude/
 .DS_Store
+
+# Exported cookies (agar aap rakho) - kabhi commit nahi hone chahiye
+app/cookies.txt

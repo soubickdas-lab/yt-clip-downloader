@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.5 (2026-08-13)
+
+- **Bulk Paste mein default format**: expected format ab saamne dikhta hai, sirf placeholder mein chhupa nahi hai
+- **"📋 AI prompt copy" button**: ek click mein poora ready-made prompt copy ho jata hai — apne AI ko do, apna bikhra hua data do, wo seedha paste karne layak format mein bana dega
+- Prompt ke rules exactly wahi hain jo app ka parser accept karta hai (tab-separated, `M:SS` / `H:MM:SS`, sirf start = end tak, khali = poora video, SN optional)
+
 ## v2.4 (2026-08-13)
 
 - **Bot-check fix**: pehle bot-check aate hi seedha Chrome cookies try hote the. Chalu Chrome ki cookie DB locked/encrypted hoti hai, to wo fail ho jata tha aur user ko *"Could not copy Chrome cookie database"* dikhta tha — asli wajah (bot-check) chhup jati thi

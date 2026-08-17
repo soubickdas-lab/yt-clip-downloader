@@ -84,6 +84,16 @@
   .spin { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--amber); border-top-color: transparent; border-radius: 50%; animation: sp .7s linear infinite; vertical-align: -2px; margin-right: 5px; }
   @keyframes sp { to { transform: rotate(360deg); } }
   .job-side { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+  .fmt { margin-top: 14px; background: var(--panel2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+  .fmt-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .fmt-head b { font-size: 13px; }
+  .fmt-note { color: var(--muted); font-size: 12.5px; flex: 1; min-width: 200px; }
+  .fmt pre {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; overflow-x: auto; font: 12.5px/1.7 ui-monospace, Menlo, monospace;
+    color: var(--text); tab-size: 8; white-space: pre;
+  }
+  .fmt .hint { margin-top: 9px; }
 </style>
 </head>
 <body>
@@ -126,6 +136,18 @@
       <span class="total" id="bulkTotal" style="display:none">Total: <b>0:00</b></span>
     </div>
     <p class="hint">Excel/Sheets se seedha copy-paste karo — SN, header line, en-dash sab auto-handle hota hai.</p>
+
+    <div class="fmt">
+      <div class="fmt-head">
+        <b>Default format</b>
+        <span class="fmt-note">Data bikhra hua hai? Ye prompt copy karke apne AI ko do — wo isi format mein bana dega.</span>
+        <button class="btn btn-ghost btn-sm" id="copyFmtBtn" onclick="copyFmtPrompt(this)">📋 AI prompt copy</button>
+      </div>
+      <pre id="fmtSample">1&#9;https://www.youtube.com/watch?v=nP4V_erJhGw&#9;1:14-1:23
+2&#9;https://www.youtube.com/watch?v=nP4V_erJhGw&#9;2:56-3:08
+3&#9;https://www.youtube.com/watch?v=nP4V_erJhGw&#9;4:46-4:54</pre>
+      <p class="hint">Har line: <code>SN</code> → <code>link</code> → <code>start-end</code> (tab ya space se alag). SN optional hai. Sirf start doge to clip video ke end tak jayegi; timestamp khali chhodo to poora video.</p>
+    </div>
   </div>
 
   <div class="card">
@@ -239,6 +261,50 @@ function updateBulkTotal() {
   if (!pairs.length) { box.style.display = 'none'; return; }
   box.style.display = '';
   box.innerHTML = totalHTML(calcTotal(pairs));
+}
+
+// Apne AI ko dene ke liye ready prompt. Rules wahi hain jo parseLines()
+// aur server ka parseRange() actually accept karte hain.
+const AI_PROMPT = [
+  'Convert the data below into this EXACT format - one clip per line:',
+  '',
+  '<serial>\t<youtube link>\t<start>-<end>',
+  '',
+  'Rules:',
+  '- One line per clip. Output nothing else: no header, no bullets, no commentary.',
+  '- Separate the three fields with a TAB character.',
+  '- Time format M:SS or H:MM:SS (e.g. 1:20 or 1:02:45).',
+  '- Join start and end with a plain hyphen and no spaces: 1:20-2:45',
+  '- If only a start time is known, write just the start (clip runs to the video end).',
+  '- If the whole video is wanted, leave the timestamp field empty.',
+  '- Keep each YouTube link exactly as given, unchanged.',
+  '- Plain text only. No markdown, no code fences, no quotes.',
+  '',
+  'Example of correct output:',
+  '1\thttps://www.youtube.com/watch?v=nP4V_erJhGw\t1:14-1:23',
+  '2\thttps://www.youtube.com/watch?v=nP4V_erJhGw\t2:56-3:08',
+  '',
+  'Here is my data:',
+  '<<< PASTE YOUR DATA HERE >>>',
+].join('\n');
+
+async function copyFmtPrompt(btn) {
+  const old = btn.textContent;
+  try {
+    await navigator.clipboard.writeText(AI_PROMPT);
+  } catch {
+    // clipboard API block ho to purana tarika
+    const ta = document.createElement('textarea');
+    ta.value = AI_PROMPT;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch {}
+    ta.remove();
+  }
+  btn.textContent = '✓ Copy ho gaya';
+  setTimeout(() => { btn.textContent = old; }, 1600);
 }
 
 function parseBulk() {
